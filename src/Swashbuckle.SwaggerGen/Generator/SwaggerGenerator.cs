@@ -91,35 +91,36 @@ namespace Swashbuckle.SwaggerGen.Generator
                         "Unbounded HTTP verbs for path '{0}'. Are you missing an HttpMethodAttribute?",
                         group.First().RelativePathSansQueryString()));
 
-                if (group.Count() > 1)
-                    throw new NotSupportedException(string.Format(
-                        "Multiple operations with path '{0}' and method '{1}'. Are you overloading action methods?",
-                        group.First().RelativePathSansQueryString(), httpMethod));
+                //if (group.Count() > 1)
+                //    throw new NotSupportedException(string.Format(
+                //        "Multiple operations with path '{0}' and method '{1}'. Are you overloading action methods?",
+                //        group.First().RelativePathSansQueryString(), httpMethod));
 
-                var apiDescription = group.Single();
+                var apiDescription = group.First();
 
+                var operation = CreateOperation(apiDescription, schemaRegistry);
                 switch (httpMethod)
                 {
                     case "GET":
-                        pathItem.Get = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Get = operation;
                         break;
                     case "PUT":
-                        pathItem.Put = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Put = operation;
                         break;
                     case "POST":
-                        pathItem.Post = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Post = operation;
                         break;
                     case "DELETE":
-                        pathItem.Delete = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Delete = operation;
                         break;
                     case "OPTIONS":
-                        pathItem.Options = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Options = operation;
                         break;
                     case "HEAD":
-                        pathItem.Head = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Head = operation;
                         break;
                     case "PATCH":
-                        pathItem.Patch = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Patch = operation;
                         break;
                 }
             }

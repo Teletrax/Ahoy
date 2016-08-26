@@ -35,12 +35,22 @@ namespace Swashbuckle.SwaggerGen.Generator
                 .Select(requestFormat => requestFormat.MediaType);
         }
 
+        internal static IEnumerable<string> SupportedRequestMediaTypes(this IEnumerable<ApiDescription> apiDescriptions)
+        {
+            return apiDescriptions.SelectMany(a => a.SupportedRequestMediaTypes());
+        }
+
         internal static IEnumerable<string> SupportedResponseMediaTypes(this ApiDescription apiDescription)
         {
             return apiDescription.SupportedResponseTypes
                 .SelectMany(responseType => responseType.ApiResponseFormats)
                 .Select(responseFormat => responseFormat.MediaType)
                 .Distinct();
+        }
+
+        internal static IEnumerable<string> SupportedResponseMediaTypes(this IEnumerable<ApiDescription> apiDescriptions)
+        {
+            return apiDescriptions.SelectMany(a=>a.SupportedResponseMediaTypes());
         }
 
         public static IEnumerable<object> GetControllerAttributes(this ApiDescription apiDescription)
