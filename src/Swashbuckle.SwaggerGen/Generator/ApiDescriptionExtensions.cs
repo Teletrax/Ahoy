@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using System.Reflection;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Swashbuckle.SwaggerGen.Generator
 {
@@ -31,8 +32,13 @@ namespace Swashbuckle.SwaggerGen.Generator
 
         internal static IEnumerable<string> SupportedRequestMediaTypes(this ApiDescription apiDescription)
         {
-            return apiDescription.SupportedRequestFormats
-                .Select(requestFormat => requestFormat.MediaType);
+            if (apiDescription.SupportedRequestFormats.Any())
+                return apiDescription.SupportedRequestFormats
+                    .Select(requestFormat => requestFormat.MediaType);
+            var action = apiDescription.ActionDescriptor as ControllerActionDescriptor;
+            if (action==null)
+                return Enumerable.Empty<string>();
+            return action.MethodInfo.GetCustomAttributes<ConsumesAttribute>().SelectMany(a => a.ContentTypes);
         }
 
         internal static IEnumerable<string> SupportedRequestMediaTypes(this IEnumerable<ApiDescription> apiDescriptions)
