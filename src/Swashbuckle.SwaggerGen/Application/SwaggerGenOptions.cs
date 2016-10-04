@@ -4,6 +4,8 @@ using System.Linq;
 using System.Xml.XPath;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.Swagger.Model;
 using Swashbuckle.SwaggerGen.Generator;
 using Swashbuckle.SwaggerGen.Annotations;
@@ -12,9 +14,10 @@ namespace Swashbuckle.SwaggerGen.Application
 {
     public class SwaggerGenOptions
     {
-        private readonly SwaggerGeneratorOptions _swaggerGeneratorOptions;
-        private readonly SchemaRegistryOptions _schemaRegistryOptions;
+        private readonly SwaggerGeneratorSettings _swaggerGeneratorSettings;
+        private readonly SchemaRegistrySettings _schemaRegistrySettings;
 
+        private IList<Func<XPathDocument>> _xmlDocFactories;
         private List<FilterDescriptor<IOperationFilter>> _operationFilterDescriptors;
         private List<FilterDescriptor<IDocumentFilter>> _documentFilterDescriptors;
         private List<FilterDescriptor<ISchemaFilter>> _schemaFilterDescriptors;
@@ -27,9 +30,10 @@ namespace Swashbuckle.SwaggerGen.Application
 
         public SwaggerGenOptions()
         {
-            _swaggerGeneratorOptions = new SwaggerGeneratorOptions();
-            _schemaRegistryOptions = new SchemaRegistryOptions();
+            _swaggerGeneratorSettings = new SwaggerGeneratorSettings();
+            _schemaRegistrySettings = new SchemaRegistrySettings();
 
+            _xmlDocFactories = new List<Func<XPathDocument>>();
             _operationFilterDescriptors = new List<FilterDescriptor<IOperationFilter>>();
             _documentFilterDescriptors = new List<FilterDescriptor<IDocumentFilter>>();
             _schemaFilterDescriptors = new List<FilterDescriptor<ISchemaFilter>>();
@@ -39,41 +43,34 @@ namespace Swashbuckle.SwaggerGen.Application
             SchemaFilter<SwaggerAttributesSchemaFilter>();
         }
 
-        public void SingleApiVersion(Info info)
+        public void SwaggerDoc(string name, Info info, Func<ApiDescription, bool> includeActionPredicate = null)
         {
-            _swaggerGeneratorOptions.SingleApiVersion(info);
-        }
-
-        public void MultipleApiVersions(
-            IEnumerable<Info> apiVersions,
-            Func<ApiDescription, string, bool> versionSupportResolver)
-        {
-            _swaggerGeneratorOptions.MultipleApiVersions(apiVersions, versionSupportResolver);
+            _swaggerGeneratorSettings.SwaggerDocs.Add(name, new SwaggerDocumentDescriptor(info, includeActionPredicate));
         }
 
         public void IgnoreObsoleteActions()
         {
-            _swaggerGeneratorOptions.IgnoreObsoleteActions = true;
+            _swaggerGeneratorSettings.IgnoreObsoleteActions = true;
         }
 
         public void GroupActionsBy(Func<ApiDescription, string> groupNameSelector)
         {
-            _swaggerGeneratorOptions.GroupNameSelector = groupNameSelector;
+            _swaggerGeneratorSettings.GroupNameSelector = groupNameSelector;
         }
 
         public void OrderActionGroupsBy(IComparer<string> groupNameComparer)
         {
-            _swaggerGeneratorOptions.GroupNameComparer = groupNameComparer;
+            _swaggerGeneratorSettings.GroupNameComparer = groupNameComparer;
         }
 
         public void AddSecurityDefinition(string name, SecurityScheme securityScheme)
         {
-            _swaggerGeneratorOptions.SecurityDefinitions.Add(name, securityScheme);
+            _swaggerGeneratorSettings.SecurityDefinitions.Add(name, securityScheme);
         }
 
         public void MapType(Type type, Func<Schema> schemaFactory)
         {
-            _schemaRegistryOptions.CustomTypeMappings.Add(type, schemaFactory);
+            _schemaRegistrySettings.CustomTypeMappings.Add(type, schemaFactory);
         }
 
         public void MapType<T>(Func<Schema> schemaFactory)
@@ -83,22 +80,22 @@ namespace Swashbuckle.SwaggerGen.Application
 
         public void DescribeAllEnumsAsStrings()
         {
-            _schemaRegistryOptions.DescribeAllEnumsAsStrings = true;
+            _schemaRegistrySettings.DescribeAllEnumsAsStrings = true;
         }
 
         public void DescribeStringEnumsInCamelCase()
         {
-            _schemaRegistryOptions.DescribeStringEnumsInCamelCase = true;
+            _schemaRegistrySettings.DescribeStringEnumsInCamelCase = true;
         }
 
         public void CustomSchemaIds(Func<Type, string> schemaIdSelector)
         {
-            _schemaRegistryOptions.SchemaIdSelector = schemaIdSelector; 
+            _schemaRegistrySettings.SchemaIdSelector = schemaIdSelector; 
         }
 
         public void IgnoreObsoleteProperties()
         {
-            _schemaRegistryOptions.IgnoreObsoleteProperties = true;
+            _schemaRegistrySettings.IgnoreObsoleteProperties = true;
         }
 
         public void OperationFilter<TFilter>(params object[] parameters)
@@ -131,40 +128,69 @@ namespace Swashbuckle.SwaggerGen.Application
             });
         }
 
-        public void IncludeXmlComments(string xmlDocPath)
+        public void IncludeXmlComments(Func<XPathDocument> xmlDocFactory)
         {
-            var xmlDoc = new XPathDocument(xmlDocPath);
-            OperationFilter<XmlCommentsOperationFilter>(xmlDoc);
-            SchemaFilter<XmlCommentsSchemaFilter>(xmlDoc);
+            _xmlDocFactories.Add(xmlDocFactory);
         }
 
-        internal SchemaRegistryOptions GetSchemaRegistryOptions(IServiceProvider serviceProvider)
+        public void IncludeXmlComments(string filePath)
         {
-            var options = _schemaRegistryOptions.Clone();
+            IncludeXmlComments(() => new XPathDocument(filePath));
+        }
+
+        internal ISwaggerProvider CreateSwaggerProvider(IServiceProvider serviceProvider)
+        {
+            var swaggerGeneratorSettings = CreateSwaggerGeneratorSettings(serviceProvider);
+            var schemaRegistrySettings = CreateSchemaRegistrySettings(serviceProvider);
+
+            // Instantiate & add the XML comments filters here so they're executed before any custom
+            // filters AND so they can share the same XPathDocument (perf. optimization)
+            foreach (var xmlDocFactory in _xmlDocFactories)
+            {
+                var xmlDoc = xmlDocFactory();
+                swaggerGeneratorSettings.OperationFilters.Insert(0, new XmlCommentsOperationFilter(xmlDoc));
+                schemaRegistrySettings.SchemaFilters.Insert(0, new XmlCommentsSchemaFilter(xmlDoc));
+            }
+
+            var schemaRegistryFactory = new SchemaRegistryFactory(
+                serviceProvider.GetRequiredService<IOptions<MvcJsonOptions>>().Value.SerializerSettings,
+                schemaRegistrySettings
+            );
+
+            return new SwaggerGenerator(
+                serviceProvider.GetRequiredService<IApiDescriptionGroupCollectionProvider>(),
+                schemaRegistryFactory,
+                swaggerGeneratorSettings
+            );
+        }
+
+        private SchemaRegistrySettings CreateSchemaRegistrySettings(IServiceProvider serviceProvider)
+        {
+            var settings = _schemaRegistrySettings.Clone();
 
             foreach (var filter in CreateFilters(_schemaFilterDescriptors, serviceProvider))
             {
-                options.SchemaFilters.Add(filter);
+                settings.SchemaFilters.Add(filter);
             }
 
-            return options;
+            return settings;
         }
 
-        internal SwaggerGeneratorOptions GetSwaggerGeneratorOptions(IServiceProvider serviceProvider)
+        private SwaggerGeneratorSettings CreateSwaggerGeneratorSettings(IServiceProvider serviceProvider)
         {
-            var options = _swaggerGeneratorOptions.Clone();
+            var settings = _swaggerGeneratorSettings.Clone();
 
             foreach (var filter in CreateFilters(_operationFilterDescriptors, serviceProvider))
             {
-                options.OperationFilters.Add(filter);
+                settings.OperationFilters.Add(filter);
             }
 
             foreach (var filter in CreateFilters(_documentFilterDescriptors, serviceProvider))
             {
-                options.DocumentFilters.Add(filter);
+                settings.DocumentFilters.Add(filter);
             }
 
-            return options;
+            return settings;
         }
 
         private IEnumerable<TFilter> CreateFilters<TFilter>(

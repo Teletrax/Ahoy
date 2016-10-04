@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CustomizedUi.Controllers
+namespace CustomUiConfig.Controllers
 {
     [Route("/products")]
     [Produces("application/json")]
@@ -51,5 +51,7 @@ namespace CustomizedUi.Controllers
         public int Id { get; set; }
 
         public string Description { get; set; }
+
+        public bool InStock { get; set; }
     }
 }
