@@ -65,10 +65,3 @@ Once this is done, you should be able to spin up you app and browse the followin
 
 The above snippet demonstrates the minimum configuration required to get the Swagger docs and swagger-ui up and running. However, these methods expose a range of configuration and extensibility options that you can pick and choose from, combining the convenience of sensible defaults with the flexibility to customize where you see fit. Read on to learn more.
 
-Sorry :( - still in progress but coming real soon! For now, take a look at the sample projects for inspiration:
-
-- https://github.com/domaindrivendev/Ahoy/tree/master/test/WebSites/Basic
-- https://github.com/domaindrivendev/Ahoy/tree/master/test/WebSites/CustomizedUi
-- https://github.com/domaindrivendev/Ahoy/tree/master/test/WebSites/MultipleVersions
-- https://github.com/domaindrivendev/Ahoy/tree/master/test/WebSites/SecuritySchemes
-- https://github.com/domaindrivendev/Ahoy/tree/master/test/WebSites/VirtualDirectory
