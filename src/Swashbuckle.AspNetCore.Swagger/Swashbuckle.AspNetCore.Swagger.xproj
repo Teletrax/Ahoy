@@ -6,7 +6,7 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>60ef9e95-84d6-44ce-968d-50237424cb16</ProjectGuid>
+    <ProjectGuid>77d1415f-6ad4-4ec3-b64f-720f9ce9ba17</ProjectGuid>
     <RootNamespace>Swashbuckle.AspNetCore.Swagger</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>

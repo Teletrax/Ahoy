@@ -86,7 +86,6 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return apiDescriptions.SelectMany(a=>a.SupportedResponseMediaTypes());
         }
 
-        public static IEnumerable<object> GetControllerAttributes(this ApiDescription apiDescription)
         internal static bool IsObsolete(this ApiDescription apiDescription)
         {
             return apiDescription.ActionAttributes().OfType<ObsoleteAttribute>().Any();
