@@ -1,6 +1,6 @@
-﻿using System.Linq;
-using Swashbuckle.Swagger.Model;
-using Swashbuckle.SwaggerGen.Generator;
+﻿using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Linq;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace MultipleVersions.Swagger
 {
@@ -8,30 +8,11 @@ namespace MultipleVersions.Swagger
     {
         public void Apply(SwaggerDocument swaggerDoc, DocumentFilterContext context)
         {
-            swaggerDoc.Paths = swaggerDoc.Paths.ToDictionary(
-                entry => entry.Key.Replace("{version}", swaggerDoc.Info.Version),
-                entry =>
-                {
-                    var pathItem = entry.Value;
-                    RemoveVersionParamFrom(pathItem.Get);
-                    RemoveVersionParamFrom(pathItem.Put);
-                    RemoveVersionParamFrom(pathItem.Post);
-                    RemoveVersionParamFrom(pathItem.Delete);
-                    RemoveVersionParamFrom(pathItem.Options);
-                    RemoveVersionParamFrom(pathItem.Head);
-                    RemoveVersionParamFrom(pathItem.Patch);
-                    return pathItem;
-                });
-        }
-
-        private void RemoveVersionParamFrom(Operation operation)
-        {
-            if (operation == null || operation.Parameters == null) return;
-
-            var versionParam = operation.Parameters.FirstOrDefault(param => param.Name == "version");
-            if (versionParam == null) return;
-
-            operation.Parameters.Remove(versionParam) ;
+            swaggerDoc.Paths = swaggerDoc.Paths
+                .ToDictionary(
+                    path => path.Key.Replace("v{version}", swaggerDoc.Info.Version),
+                    path => path.Value
+                );
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Swashbuckle.Swagger.Model;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace CustomIndexHtml
 {
@@ -19,6 +19,8 @@ namespace CustomIndexHtml
 
         public void Configure(IApplicationBuilder app)
         {
+            // Allow wwwroot/swagger/index.html to be served at /swagger
+            app.UseDefaultFiles();
             app.UseStaticFiles();
 
             app.UseMvc();
